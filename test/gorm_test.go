@@ -71,6 +71,6 @@ func TestBlog(t *testing.T) {
 	if err != nil {
 		fmt.Println("错误")
 	}
-	println(id[0])
+	fmt.Println(id[0])
 	fmt.Println(id[0].Category.CategoryName)
 }
