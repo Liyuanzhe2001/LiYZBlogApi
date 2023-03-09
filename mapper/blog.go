@@ -138,8 +138,31 @@ func GetGroupYearMonthByIsPublished() ([]string, error) {
 	return date, err
 }
 
-//func GetArchiveBlogListByYearMonthAndIsPublished(yearMonth string) ([]models.Blog, error) {
-//	var blogs []models.Blog
-//	models.Db.Model(new(models.Blog)).
-//		Select("id, title, password")
-//}
+func GetArchiveBlogListByYearMonthAndIsPublished(yearMonth string) ([]vo.ArchiveBlog, error) {
+	var archiveBlog []vo.ArchiveBlog
+	err := models.Db.Table("blog").
+		Select("id, title, password, date_format(create_time, \"%d日\") as day").
+		Where("date_format(create_time, \"%Y年%m月\") = ? and is_published = true", yearMonth).
+		Order("created_at desc").
+		Scan(&archiveBlog).
+		Error
+	if err != nil {
+		return nil, err
+	}
+	return archiveBlog, err
+}
+
+func GetRandomBlogListByLimitNumAndIsPublishedAndIsRecommend(limitNum int) ([]vo.RandomBlog, error) {
+	var randomBlog []vo.RandomBlog
+	err := models.Db.Table("blog").
+		Select("id, title, password, create_time, first_picture").
+		Where("is_published = true and is_recommend = true").
+		Order("rand()").
+		Limit(limitNum).
+		Scan(&randomBlog).
+		Error
+	if err != nil {
+		return nil, err
+	}
+	return randomBlog, err
+}
