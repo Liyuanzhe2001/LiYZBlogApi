@@ -24,7 +24,7 @@ type Blog struct {
 
 	User     *User     `gorm:"foreignKey:id;references:user_id"`     //文章作者(因为是个人博客，也可以不加作者字段，暂且加上)
 	Category *Category `gorm:"foreignKey:id;references:category_id"` //文章分类
-	//tags     *[]Tag    `gorm:"foreignKey:"`                          //文章标签
+	tags     *[]Tag    `gorm:"foreignKey:"`                          //文章标签
 
 	//CategoryBasic *CategoryBasic `gorm:"foreignKey:id;references:category_id"`
 }

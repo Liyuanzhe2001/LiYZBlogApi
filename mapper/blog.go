@@ -2,7 +2,10 @@ package mapper
 
 import (
 	"LiYZBlog/models"
+	"LiYZBlog/models/dto"
 	"LiYZBlog/models/vo"
+	"LiYZBlog/util"
+	"gorm.io/gorm"
 )
 
 func GetListByTitleAndCategoryId(title string, categoryId int) ([]models.Blog, error) {
@@ -165,4 +168,180 @@ func GetRandomBlogListByLimitNumAndIsPublishedAndIsRecommend(limitNum int) ([]vo
 		return nil, err
 	}
 	return randomBlog, err
+}
+
+func GetBlogViewsList() ([]dto.BlogView, error) {
+	var blogView []dto.BlogView
+	err := models.Db.Table("blog").
+		Select("id, views").
+		Scan(&blogView).
+		Error
+	if err != nil {
+		return nil, err
+	}
+	return blogView, err
+}
+
+func DeleteBlogById(id int64) (int64, error) {
+	var cnt int64
+	err := models.Db.Where("id=?", id).Delete(models.Blog{}).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func DeleteBlogTagByBlogId(blogId int64) (int64, error) {
+	var cnt int64
+	err := models.Db.Where("blog_id = ?", blogId).Delete(models.BlogTag{}).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func SaveBlog(blog dto.Blog) (int64, error) {
+	data := models.Blog{
+		Title:            blog.Title,
+		FirstPicture:     blog.FirstPicture,
+		Content:          blog.Content,
+		Description:      blog.Description,
+		IsPublished:      util.IfUnit8(blog.Published, 1, 0),
+		IsRecommend:      util.IfUnit8(blog.Recommend, 1, 0),
+		IsAppreciation:   util.IfUnit8(blog.Appreciation, 1, 0),
+		IsCommentEnabled: util.IfUnit8(blog.CommentEnabled, 1, 0),
+		Views:            blog.Views,
+		Words:            blog.Words,
+		ReadTime:         blog.ReadTime,
+		CategoryId:       int64(blog.Category.ID),
+		IsTop:            util.IfUnit8(blog.Top, 1, 0),
+		Password:         blog.Password,
+		UserId:           int64(blog.User.ID),
+	}
+
+	var cnt int64
+	err := models.Db.Create(&data).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func SaveBlogTag(blogId int64, tagId int64) (int64, error) {
+	blogTag := models.BlogTag{
+		BlogId: blogId,
+		TagId:  tagId,
+	}
+
+	var cnt int64
+	err := models.Db.Create(&blogTag).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func UpdateBlogRecommendById(blogId int64, recommend bool) (int64, error) {
+	var cnt int64
+	err := models.Db.Table("blog").
+		Where("id=?", blogId).
+		Update("is_recommend", util.IfUnit8(recommend, 1, 0)).
+		Count(&cnt).
+		Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func UpdateBlogVisibilityById(blogId int64, bv dto.BlogVisibility) (int64, error) {
+	var blog = models.Blog{
+		Model:            gorm.Model{ID: uint(blogId)},
+		IsAppreciation:   util.IfUnit8(bv.Appreciation, 1, 0),
+		IsRecommend:      util.IfUnit8(bv.Recommend, 1, 0),
+		IsCommentEnabled: util.IfUnit8(bv.CommentEnabled, 1, 0),
+		IsTop:            util.IfUnit8(bv.Top, 1, 0),
+		IsPublished:      util.IfUnit8(bv.Published, 1, 0),
+		Password:         bv.Password,
+	}
+	var cnt int64
+	err := models.Db.Updates(&blog).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func UpdateBlogTopById(blogId int64, top bool) (int64, error) {
+	blog := models.Blog{
+		Model: gorm.Model{
+			ID: uint(blogId),
+		},
+		IsTop: util.IfUnit8(top, 1, 0),
+	}
+	var cnt int64
+	err := models.Db.Updates(&blog).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func UpdateViews(blogId int64, views int) (int64, error) {
+	blog := models.Blog{
+		Model: gorm.Model{
+			ID: uint(blogId),
+		},
+		Views: views,
+	}
+	var cnt int64
+	err := models.Db.Updates(&blog).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func GetBlogById(id int64) (models.Blog, error) {
+	var blog models.Blog
+	err := models.Db.Table("blog b").
+		Select("b.id,b.title,b.first_picture,b.content,b.description,b.is_recommend,b.is_published,b.is_appreciation,b.is_comment_enabled,b.is_top,b.create_time,b.update_time,b.views,b.words,b.read_time,b.password,c.id as category_id,c.category_name,bt.tag_id  as tag_id,t.tag_name as tag_name,t.color").
+		Joins("left join category as c on b.category_id = c.id").
+		Joins("left join blog_tag as bt on b.id = bt.blog_id").
+		Joins("left join tag as t on bt.tag_id = t.id").
+		Where("b.id=?", id).
+		First(&blog).
+		Error
+	if err != nil {
+		return models.Blog{}, err
+	}
+	return blog, err
+}
+
+func GetTitleByBlogId(id int64) (string, error) {
+	var title string
+	err := models.Db.Table("blog").
+		Select("title").
+		Pluck("title", &title).
+		Error
+	if err != nil {
+		return "", err
+	}
+	return title, err
+}
+
+func GetBlogByIdAndIsPublished(id int64) (vo.BlogDetail, error) {
+	var blogDetail vo.BlogDetail
+	err := models.Db.Table("blog b").
+		Select("b.id,b.title,b.content,b.is_appreciation,b.is_comment_enabled,b.is_top,b.create_time,b.update_time,b.views,b.words,b.read_time,b.password,c.category_name,t.tag_name as tag_name,t.color").
+		Joins("left join category as c on b.category_id = c.id").
+		Joins("left join blog_tag as bt on b.id = bt.blog_id").
+		Joins("left join tag as t on bt.tag_id = t.id").
+		Where("b.id=? and b.is_published=true", id).
+		Scan(&blogDetail).
+		Error
+	if err != nil {
+		return vo.BlogDetail{}, err
+	}
+	return blogDetail, err
 }
