@@ -345,3 +345,118 @@ func GetBlogByIdAndIsPublished(id int64) (vo.BlogDetail, error) {
 	}
 	return blogDetail, err
 }
+
+func GetBlogPassword(blogId string) (string, error) {
+	var password string
+	err := models.Db.Table("blog").
+		Select("password").
+		Pluck("password", &password).
+		Error
+	if err != nil {
+		return "", err
+	}
+	return password, err
+}
+
+func UpdateBlog(blog dto.Blog) (int64, error) {
+	var cnt int64
+	data := models.Blog{
+		Model: gorm.Model{
+			ID: uint(blog.Id),
+		},
+		Title:            blog.Title,
+		FirstPicture:     blog.FirstPicture,
+		Content:          blog.Content,
+		Description:      blog.Description,
+		IsPublished:      util.IfUnit8(blog.Published, 1, 0),
+		IsRecommend:      util.IfUnit8(blog.Recommend, 1, 0),
+		IsAppreciation:   util.IfUnit8(blog.Appreciation, 1, 0),
+		IsCommentEnabled: util.IfUnit8(blog.CommentEnabled, 1, 0),
+		Views:            blog.Views,
+		Words:            blog.Words,
+		ReadTime:         blog.ReadTime,
+		CategoryId:       int64(blog.Category.ID),
+		IsTop:            util.IfUnit8(blog.Top, 1, 0),
+		Password:         blog.Password,
+	}
+	err := models.Db.Save(&data).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func CountBlog() (int64, error) {
+	var cnt int64
+	err := models.Db.Table("blog").Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func CountBlogByIsPublished() (int64, error) {
+	var cnt int64
+	err := models.Db.Table("blog").Where("is_published = true").Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func CountBlogByCategoryId(categoryId int64) (int64, error) {
+	var cnt int64
+	err := models.Db.Table("blog").Where("category_id=?", categoryId).Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func CountBlogByTagId(tagId int64) (int64, error) {
+	var cnt int64
+	err := models.Db.Table("blog_tag").Where("tag_id = ?").Count(&cnt).Error
+	if err != nil {
+		return -1, err
+	}
+	return cnt, err
+}
+
+func GetCommentEnabledByBlogId(blogId int64) (bool, error) {
+	var isCommentEnabled uint8
+	err := models.Db.Table("blog").
+		Select("is_comment_enabled").
+		Where("id=?", blogId).
+		Pluck("is_comment_enabled", &isCommentEnabled).
+		Error
+	if err != nil {
+		return false, err
+	}
+	return isCommentEnabled == 1, err
+}
+
+func GetPublishedByBlogId(blogId int64) (bool, error) {
+	var isPublish uint8
+	err := models.Db.Table("blog").
+		Select("is_published").
+		Where("id=?", blogId).
+		Pluck("is_published", &isPublish).
+		Error
+	if err != nil {
+		return false, err
+	}
+	return isPublish == 1, err
+}
+
+func GetCategoryBlogCountList() ([]vo.CategoryBlogCount, error) {
+	var data []vo.CategoryBlogCount
+	err := models.Db.Table("blog").
+		Select("category_id as id, count(category_id) as blog_count").
+		Group("category_id").
+		Scan(&data).
+		Error
+	if err != nil {
+		return nil, err
+	}
+	return data, err
+}
