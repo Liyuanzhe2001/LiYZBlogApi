@@ -1,6 +1,9 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"LiYZBlog/models/vo"
+	"gorm.io/gorm"
+)
 
 type Comment struct {
 	gorm.Model
@@ -17,6 +20,9 @@ type Comment struct {
 	ParentCommentId int64  `gorm:"column:parent_comment_id;type:bigint(20);" json:"parent_comment_id"` // 父评论id，-1为根评论
 	Website         string `gorm:"column:website;type:varchar(255);" json:"website"`                   // 个人网站
 	Qq              string `gorm:"column:qq;type:varchar(255);" json:"qq"`                             // 如果评论昵称为QQ号，则将昵称和头像置为QQ昵称和QQ头像，并将此字段置为QQ号备份
+
+	blog          *vo.BlogIdAndTitle // 所属的文章
+	replyComments *[]Comment         //回复该评论的评论
 }
 
 func (table *Comment) TableName() string {
